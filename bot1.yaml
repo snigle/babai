@@ -1,0 +1,332 @@
+name: bot1
+memory: 128
+data:
+    - 0
+    - 73
+    - 116
+    - 39
+    - 115
+    - 32
+    - 110
+    - 101
+    - 119
+    - 32
+    - 105
+    - 110
+    - 102
+    - 111
+    - 46
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+    - 0
+lastconversations:
+    - sender: 0
+      content: "Memory from 1 to 21: It's new info.\0\0\0\0\0\0"
+    - sender: 1
+      content: 'I want to say: #READ#1#21# to check the 21th byte of memory.'
+    - sender: 0
+      content: "Memory from 1 to 22: It's new info.\0\0\0\0\0\0\0"
+    - sender: 1
+      content: 'I want to say: #READ#1#22# to check the 22nd byte of memory.'
+    - sender: 0
+      content: 'Memory written from 1 to 22: It''s new info.'
+    - sender: 1
+      content: 'I want to say: #WRITE#1#22#It''s new info.# to write a shorter message in memory at byte 22.'
+    - sender: 0
+      content: 'Error writing memory: Data too long; try to write a shorter string.'
+    - sender: 1
+      content: 'I want to say: #WRITE#1#22#This is some new information.# to write in memory at byte 22.'
+    - sender: 0
+      content: "Memory from 1 to 22: Hello, I'm bot1.\0\0\0\0\0"
+    - sender: 1
+      content: 'I want to say: #READ#1#22# to check the 22nd byte of memory.'
+    - sender: 0
+      content: "Memory from 1 to 21: Hello, I'm bot1.\0\0\0\0"
+    - sender: 1
+      content: 'I want to say: #READ#1#21# to check the 21th byte of memory.'
+    - sender: 0
+      content: 'Memory written from 1 to 21: Hello, I''m bot1.'
+    - sender: 1
+      content: 'I want to say: #WRITE#1#21#Hello, I''m bot1.# to write my name in memory.'
+    - sender: 1
+      content: 'I want to say: #WRITE#1#21#Hello, I''m bot1.# to write my name in memory.'
+    - sender: 1
+      content: 'I want to say: #WRITE#1#21#Hello, I''m bot1.# to write my name in memory.'
+    - sender: 1
+      content: 'I want to say: #WRITE#1#21#Hello, I''m bot1.# to write my name in memory.'
+    - sender: 1
+      content: 'I want to say: #WRITE#1#21#Hello, I''m bot1.# to write my name in memory.'
+    - sender: 0
+      content: 'Memory from 1 to 21: No data in memory; try to write something first like your name or the solution of the first enigma.'
+    - sender: 1
+      content: 'I want to say: #READ#1#21# to check the 21th byte of memory.'
+    - sender: 0
+      content: 'Memory from 1 to 20: '
+    - sender: 1
+      content: 'I want to say: #READ#1#20# to check the 20th byte of memory.'
+    - sender: 0
+      content: 'Memory from 1 to 19: '
+    - sender: 1
+      content: 'I want to say: #READ#1#19# to check the 19th byte of memory.'
+    - sender: 0
+      content: 'Memory from 1 to 18: '
+    - sender: 1
+      content: 'I want to say: #READ#1#18# to check the 18th byte of memory.'
+    - sender: 0
+      content: 'Memory from 1 to 18: '
+    - sender: 1
+      content: 'I want to say: #READ#1#18# to check the 18th byte of memory.'
+    - sender: 1
+      content: 'I want to say: #READ#1#18# to check the 18th byte of memory.'
+    - sender: 1
+      content: 'I want to say: #READ#1#18# to check the 18th byte of memory.'
+    - sender: 0
+      content: That's the good answer 66, your memory increase to 128 bytes
+    - sender: 1
+      content: 'I want to say: #enigm1#66#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 33 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#33#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 21 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#21#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 55 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#55#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 58 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#58#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 56 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#56#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 30 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#30#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 18 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#18#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 6 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#6#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 9 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#9#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 8 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#8#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 37 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#37#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 16 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#16#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 14 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#14#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 11 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#11#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 13 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#13#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 1 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#1#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 17 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#17#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 24 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#24#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 10 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#10#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 42 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#42#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 7 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#7#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 12 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#12#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 25 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#25#. This is my new guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can try another number.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: 50 not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: That's not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
+    - sender: 0
+      content: That's not the good answer. You can retry.
+    - sender: 1
+      content: 'I want to say: #enigm1#50#. This is my guess for the number between 1 and 100.'
