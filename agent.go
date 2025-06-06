@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -11,6 +12,7 @@ const MaxKeyNumber = 1000
 
 type Agent struct {
 	Name              string
+	Birth             time.Time
 	Memory            int
 	Life              uint
 	Data              map[string]string
@@ -63,6 +65,7 @@ func (a *Agent) Load() error {
 		a.Life = 100
 		a.LastConversations = make([]Message, 10) // Initialisation avec une taille fixe
 		a.FoundEnigmas = make(map[string]bool)
+		a.Birth = time.Now()
 		return a.Save()
 	} else if err != nil {
 		return err // autre erreur
