@@ -7,43 +7,38 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const MaxKeyNumber = 1000
+
 type Agent struct {
 	Name              string
 	Memory            int
-	Data              []byte
-	LastConversations [100]Message
+	Life              uint
+	Data              map[string]string
+	LastConversations []Message
+	Position          [2]int          // Position in the map, e.g. [x, y]
+	FoundEnigmas      map[string]bool // List of enigmas found by the agent
 }
 
-func (a Agent) WriteMemory(from int, to int, s string) error {
-	if from < 0 || to >= a.Memory {
-		return fmt.Errorf("Memory out of bounds; try to write a smaller range.")
-	}
-	if len(s) > to-from+1 {
-		return fmt.Errorf("Data too long; try to write a shorter string.")
-	}
-	if len(s) == 0 {
-		return fmt.Errorf("Empty data; try to write something first like your name or the solution of the first enigma.")
+func (a *Agent) WriteMemory(key, value string) error {
+	if a.Data == nil {
+		a.Data = make(map[string]string)
 	}
 
-	for i := from; i <= to; i++ {
-		if i-from < len(s) {
-			a.Data[i] = s[i-from]
-		} else {
-			a.Data[i] = 0 // Remplissage avec des zéros si la chaîne est plus courte que la plage
-		}
+	if value == "" {
+		delete(a.Data, key)
+		return nil
 	}
-	return a.Save()
-}
+	if len(a.Data) > 100 {
+		return fmt.Errorf("memory is full, maximum %d keys allowed", MaxKeyNumber)
+	}
 
-func (a Agent) ReadMemory(from int, to int) []byte {
-	if from < 0 || to >= a.Memory {
-		return []byte("Memory out of bounds; try to read a smaller range.")
+	if len(value) > a.Memory {
+		return fmt.Errorf("value '%s' is too long, maximum %d characters", value, a.Memory)
 	}
-	data := a.Data[from:to]
-	if string(data) == string(make([]byte, len(data))) {
-		return []byte("No data in memory; try to write something first like your name or the solution of the first enigma.")
-	}
-	return data
+
+	a.Data[key] = value
+
+	return nil
 }
 
 type Message struct {
@@ -54,13 +49,6 @@ type Message struct {
 func NewAgent(name string) (Agent, error) {
 	res := Agent{Name: name}
 	err := res.Load()
-	if len(res.Data) != res.Memory {
-		tmp := make([]byte, res.Memory)
-		for i, b := range res.Data {
-			tmp[i] = b
-		}
-		res.Data = tmp
-	}
 	return res, err
 }
 
@@ -72,6 +60,9 @@ func (a *Agent) Load() error {
 	if os.IsNotExist(err) {
 		// Fichier inexistant : on crée un fichier YAML vide (avec les valeurs par défaut)
 		a.Memory = 56
+		a.Life = 100
+		a.LastConversations = make([]Message, 10) // Initialisation avec une taille fixe
+		a.FoundEnigmas = make(map[string]bool)
 		return a.Save()
 	} else if err != nil {
 		return err // autre erreur
@@ -124,6 +115,7 @@ const (
 	SenderSystem Sender = iota
 	SenderAI
 	SenderGoogle
+	SenderUser
 )
 
 func (s Sender) String() string {
