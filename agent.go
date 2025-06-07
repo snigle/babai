@@ -63,7 +63,7 @@ func (a *Agent) Load() error {
 		// Fichier inexistant : on crée un fichier YAML vide (avec les valeurs par défaut)
 		a.Memory = 56
 		a.Life = 100
-		a.LastConversations = make([]Message, 10) // Initialisation avec une taille fixe
+		a.LastConversations = make([]Message, 100) // Initialisation avec une taille fixe
 		a.FoundEnigmas = make(map[string]bool)
 		a.Birth = time.Now()
 		return a.Save()

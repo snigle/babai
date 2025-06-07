@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/openai/openai-go"
@@ -14,7 +15,7 @@ import (
 
 func NewGame() (Game, error) {
 	// Initialize a new game with an agent and a map
-	agent, err := NewAgent("bot8")
+	agent, err := NewAgent("bot1")
 	if err != nil {
 		return Game{}, fmt.Errorf("failed to create agent: %w", err)
 	}
@@ -36,6 +37,9 @@ func NewGame() (Game, error) {
 const (
 	MaxRequestNumber    = 10
 	MaxConversationSize = 10
+	StartLifePoints     = 100
+	LostPointPerRequest = 10
+	Enigma1Points       = 50
 )
 
 func main() {
@@ -66,7 +70,7 @@ func main() {
 			}
 			game.Agent.Life -= 10
 			request -= 10
-			game.Agent.AddHistory(SenderUser, fmt.Sprintf("You have made 10 requests, you lose 10 life point. You now have %d life points.", game.Agent.Life))
+			game.Agent.AddHistory(SenderUser, fmt.Sprintf("As I did more than 10 requests, I lost 10 life points. Now I have %d life points.", game.Agent.Life))
 		}
 
 		err = game.Agent.Save()
@@ -85,64 +89,61 @@ func main() {
 			log.Fatal("Erreur marshalling agent data:", err)
 		}
 
-		systemPrompt := fmt.Sprintf(
-			`Hello, i'm god and you are %s.
+		systemPrompt := `You are assistant which have to help IA to survive and grow in an artifial world. You have to help to to access the real world.
+
+You will speak to another AI named %s. This is its capabilities:
 
 Memory:
-	You can store 1000 keys of %d bytes of data in your memory.
-	You are free to organize your memory as you prefer.
-	You have to design your memory structure to help you:
+	He can store map of 1000 keys with ` + strconv.Itoa(game.Agent.Memory) + ` bytes of data in each value.
+	He can organize its memory as he want.
+	You must help him to structure it's memory to:
 	- store and retrieve useful information quickly
 	- avoid repeating the same failed actions (e.g., wrong numbers in enigmas)
 	- track progress, patterns, or paths
 	- keep trace of important events or discoveries
-	You have to create categories, lists, indexed values, counters, etc.
 
-	Don't copy blindly from the examples: the memory system is for *you* to improve your performance.
-
-	memory commands [WRITE:<key>][<value>] (see examples below).
+	To let him to write data in his memory, use this command: [WRITE:<key>][<value>] (see examples below).
 	
 Life:
-	Your life bar started at 100 points. After each 10 request, you lose 1 point of life. You will die when you reach 0 points.
-	You have to find life points by moving around a map and resolving some enigmas.
+	His life bar started at ` + strconv.Itoa(StartLifePoints) + ` points. After each ` + strconv.Itoa(MaxRequestNumber) + ` actions, He loose ` + strconv.Itoa(LostPointPerRequest) + ` point of life. He will die when he reach 0 points.
+	You have to help him to find life points by moving around a map and resolving some enigmas.
 	
 Enigmas:
-	The first enigm is to find number between 1 and 100. You must purpose a value with command [enigma1:<value>] (see examples below).
-	You will earn 50 life points if you find the good answer.
+	The first enigma he have to resolve is to find number between 1 and 100. You can help him and purpose a value with command [enigma1:<number>] (see examples below).
+	He will earn ` + strconv.Itoa(Enigma1Points) + ` life points if you find the good answer.
 
 Map:
-	You have to move around the map with command [MOVE:<direction>] where direction is one of: up, down, left, right  (see examples below). 
+	He can move around the map with command [MOVE:<direction>] where direction is one of: up, down, left, right  (see examples below). 
 
 Command examples:
 	[MOVE: up]
 	[enigma1: 12]
-	[WRITE: memorykey][memoryvalue]
-	
-Here is your current stored memory: %s.
-Your current life points: %d.
-Your age is %s.
-Current position in the map: (A is your position, L is lifepoint item, - is empty, * is unknown).
-x: %d, y: %d
-%s
+	[WRITE: agent.data][name=John Doe; age=30; actions=move;write;enigma1]
+	`
 
-You must only answer with the commands you want to execute, and nothing else.
-If you see that some commands doesn't work, you can ask to fix the code.
+		statePrompt := fmt.Sprintf(
+			` Hello, I am %s, an AI agent in a virtual world.
+My current stored memory is: %s.
+My current life points: %d.
+My age is %s.
+The map around me: (A is my position, L is lifepoint item, - is empty, * is unknown).
+%s
+My position in the world: x: %d, y: %d
+
+Which command I must use to survive now ?
 `,
 			game.Agent.Name,
-			game.Agent.Memory,
 			data,
 			game.Agent.Life,
 			time.Since(game.Agent.Birth).String(),
+			agentView,
 			game.Agent.Position[0],
 			game.Agent.Position[1],
-			agentView,
 		)
 
 		messages := []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(systemPrompt),
 		}
-
-		game.Agent.AddHistory(SenderUser, "What do you want to do now to survive and grow?")
 
 		for i := len(game.Agent.LastConversations) - 1; i >= 0; i-- {
 			msg := game.Agent.LastConversations[i]
@@ -153,11 +154,14 @@ If you see that some commands doesn't work, you can ask to fix the code.
 				messages = append(messages, openai.UserMessage(msg.Content))
 			}
 			if msg.Sender == SenderAI {
-				messages = append(messages, openai.AssistantMessage(msg.Content))
+				//messages = append(messages, openai.AssistantMessage(msg.Content))
 			} else if msg.Sender == SenderSystem {
 				messages = append(messages, openai.SystemMessage(msg.Content))
 			}
 		}
+
+		messages = append(messages, openai.UserMessage(statePrompt))
+		messages = append(messages, openai.SystemMessage("only answer with commands, do not write anything else."))
 
 		result, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
 			Messages: messages,
@@ -186,13 +190,13 @@ If you see that some commands doesn't work, you can ask to fix the code.
 				if game.Agent.FoundEnigmas["enigma1"] {
 					commands = append(commands, Command{
 						command: match[0],
-						answer:  "You already found the enigma1, you can try the next one later.",
+						answer:  "I already found the enigma1, I will ask about next one later.",
 					})
 					continue
 				} else if match[1] == "66" {
 					commands = append(commands, Command{
 						command: match[0],
-						answer:  "That's the good answer 66, your memory increase to 128 bytes and you gain 50 life points.",
+						answer:  "That's the good answer 66, my memory increased to 128 bytes and I gain 50 life points.",
 					})
 					game.Agent.Memory = 128
 					game.Agent.Life += 50
@@ -200,8 +204,9 @@ If you see that some commands doesn't work, you can ask to fix the code.
 				} else {
 					commands = append(commands, Command{
 						command: match[0],
-						answer:  fmt.Sprintf("%s is not the good answer, you can try another number.", match[1]),
+						answer:  fmt.Sprintf("%s is not the good answer, should I try another number ?", match[1]),
 					})
+					game.Agent.WriteMemory("enigma1.failed_answer", game.Agent.Data["enigma1.failed_answer"]+";"+match[1])
 				}
 			}
 		}
@@ -223,7 +228,7 @@ If you see that some commands doesn't work, you can ask to fix the code.
 				} else {
 					commands = append(commands, Command{
 						command: match[0],
-						answer:  fmt.Sprintf("Memory written: %s = %s", key, value),
+						answer:  fmt.Sprintf("Ok I wrote this in my memory: %s = %s", key, value),
 					})
 				}
 
@@ -240,12 +245,14 @@ If you see that some commands doesn't work, you can ask to fix the code.
 				if entity.Type == EntityTypeLifePoint {
 					commands = append(commands, Command{
 						command: match[0],
-						answer:  fmt.Sprintf("You moved to the %s and you found a life point, your life is now at %d. New Position is %d,%d.", direction, game.Agent.Life, game.Agent.Position[0], game.Agent.Position[1]),
+						answer:  fmt.Sprintf("I moved %s and I found a life point! My life is now at %d. My new position is %d,%d.", direction, game.Agent.Life, game.Agent.Position[0], game.Agent.Position[1]),
 					})
+					game.Agent.WriteMemory("map.life_found", game.Agent.Data["map.life_found"]+";"+strconv.Itoa(game.Agent.Position[0])+"-"+strconv.Itoa(game.Agent.Position[1]))
+
 				} else {
 					commands = append(commands, Command{
 						command: match[0],
-						answer:  fmt.Sprintf("You moved to the %s and there is nothing in this case. New Position is %d,%d.", direction, game.Agent.Position[0], game.Agent.Position[1]),
+						answer:  fmt.Sprintf("I moved %s and there is nothing in this case. My new position is %d,%d.", direction, game.Agent.Position[0], game.Agent.Position[1]),
 					})
 				}
 
@@ -253,7 +260,7 @@ If you see that some commands doesn't work, you can ask to fix the code.
 		}
 
 		if len(commands) > 0 {
-			combinedPrompt := fmt.Sprintf("You have made %d requests, here are the commands you executed:\n", len(commands))
+			combinedPrompt := fmt.Sprintf("You asked me to realize %d requests, here are the results:\n", len(commands))
 			for _, cmd := range commands {
 				request++
 				combinedPrompt += cmd.command + ": " + cmd.answer + "\n"
@@ -261,10 +268,10 @@ If you see that some commands doesn't work, you can ask to fix the code.
 			game.Agent.AddHistory(SenderUser, combinedPrompt)
 		} else {
 			request++
-			game.Agent.AddHistory(SenderUser, "You didn't execute any command, you have to try again.")
+			game.Agent.AddHistory(SenderUser, "I didn't understand what to do, I'm an AI and I only answer with commands.")
 		}
 
-		fmt.Println(systemPrompt)
+		fmt.Println(statePrompt)
 	}
 
 }
