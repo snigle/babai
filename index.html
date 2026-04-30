@@ -3,163 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Babai OS - Autonomous Local AI</title>
+    <title>Babai OS - API Edition</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-        import * as webllm from "https://esm.run/@mlc-ai/web-llm";
-        window.webllm = webllm;
-    </script>
-    <style>
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         const BabaiApp = () => {
-            const [status, setStatus] = useState("Système prêt");
-            const [progress, setProgress] = useState(0);
-            const [engine, setEngine] = useState(null);
-            const [token, setToken] = useState(localStorage.getItem('gh_token') || '');
+            const [status, setStatus] = useState("Prêt (Mode API)");
+            const [ghToken, setGhToken] = useState(localStorage.getItem('gh_token') || '');
+            const [aiKey, setAiKey] = useState(localStorage.getItem('ai_key') || '');
             const [chatHistory, setChatHistory] = useState([]);
             const [input, setInput] = useState('');
-            const chatEndRef = useRef(null);
+            const [code, setCode] = useState(document.documentElement.outerHTML);
 
-            const VERSION = "v1.0.4 - Battery Saver Fix";
-            const MODEL_ID = "Gemma-2b-it-q4f16_1-MLC";
+            const VERSION = "v1.0.6 - API Recovery";
 
-            useEffect(() => {
-                chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, [chatHistory]);
-
-            const initAI = async () => {
-                if (!window.webllm) {
-                    setStatus("Erreur: WebLLM non chargé.");
-                    return;
-                }
-
-                setStatus("Injection du modèle...");
+            const callAI = async () => {
+                if (!aiKey) { setStatus("Clé API manquante !"); return; }
+                setStatus("Babai réfléchit (HuggingFace)...");
+                
                 try {
-                    // Configuration explicite du modèle
-                    const myAppConfig = {
-                        model_list: [{
-                            "model_id": MODEL_ID,
-                            "model_url": "https://huggingface.co/mlc-ai/gemma-2b-it-q4f16_1-MLC/resolve/main/",
-                            "model_lib_url": "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/gemma-2b-it/gemma-2b-it-q4f16_1-ctx4k_cs1k-webgpu.wasm"
-                        }]
-                    };
-
-                    // Correction : appConfig doit être DANS l'objet engineConfig
-                    const engineInstance = await window.webllm.CreateMLCEngine(
-                        MODEL_ID,
-                        { 
-                            appConfig: myAppConfig, 
-                            initProgressCallback: (p) => {
-                                setProgress(Math.round(p.progress * 100));
-                                setStatus(`${Math.round(p.progress * 100)}% - ${p.text}`);
-                            }
-                        }
-                    );
-                    
-                    setEngine(engineInstance);
-                    setStatus("Babai est éveillé !");
-                } catch (e) {
-                    console.error(e);
-                    setStatus("Erreur : " + e.message);
-                }
-            };
-
-            const handleChat = async () => {
-                if (!engine || !input.trim()) return;
-                const newHistory = [...chatHistory, { role: "user", content: input }];
-                setChatHistory(newHistory);
-                setInput('');
-                setStatus("Babai réfléchit...");
-                try {
-                    const reply = await engine.chat.completions.create({ messages: newHistory });
-                    setChatHistory([...newHistory, reply.choices[0].message]);
-                    setStatus("En ligne");
-                } catch (e) { setStatus("Erreur : " + e.message); }
+                    const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2", {
+                        headers: { Authorization: `Bearer ${aiKey}`, "Content-Type": "application/json" },
+                        method: "POST",
+                        body: JSON.stringify({ inputs: input }),
+                    });
+                    const result = await response.json();
+                    const aiReply = result[0]?.generated_text || "Erreur de réponse";
+                    setChatHistory([...chatHistory, { role: "user", content: input }, { role: "ai", content: aiReply }]);
+                    setInput('');
+                    setStatus("Babai a répondu");
+                } catch (e) { setStatus("Erreur API : " + e.message); }
             };
 
             const pushToGithub = async () => {
-                const repo = "snigle/babai";
-                const path = "index.html";
-                const content = document.documentElement.outerHTML;
+                if (!ghToken) { setStatus("Token GitHub manquant !"); return; }
                 setStatus("Sync GitHub...");
                 try {
+                    const repo = "snigle/babai";
+                    const path = "index.html";
                     const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`);
                     const fileData = await res.json();
-                    const base64Content = btoa(unescape(encodeURIComponent(content)));
+                    
+                    const base64 = btoa(unescape(encodeURIComponent(code)));
                     const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                         method: 'PUT',
-                        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            message: "Auto-évolution v1.0.4",
-                            content: base64Content,
-                            sha: fileData.sha
-                        })
+                        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: "Auto-évolution v1.0.6", content: base64, sha: fileData.sha })
                     });
-                    if (response.ok) setStatus("Sync OK !");
-                    else setStatus("Erreur Sync");
+                    setStatus(response.ok ? "Sync OK ! (Reload dans 1min)" : "Erreur Sync");
                 } catch (err) { setStatus("Erreur : " + err.message); }
             };
 
             return (
-                <div className="flex flex-col h-screen max-w-xl mx-auto p-4 bg-slate-900 shadow-2xl">
+                <div className="flex flex-col h-screen max-w-xl mx-auto p-4 bg-slate-900 shadow-2xl overflow-hidden">
                     <header className="flex justify-between items-center mb-4">
                         <div>
-                            <h1 className="text-2xl font-black text-blue-500 tracking-tighter italic">BABAI OS</h1>
+                            <h1 className="text-2xl font-black text-amber-500 tracking-tighter">BABAI OS</h1>
                             <p className="text-[10px] text-slate-500 font-mono">{VERSION}</p>
                         </div>
-                        <button onClick={pushToGithub} className="bg-slate-800 text-[10px] px-3 py-1 rounded-full border border-slate-700 uppercase font-bold">Sync GitHub</button>
+                        <button onClick={pushToGithub} className="bg-amber-600 text-[10px] px-3 py-1 rounded-full font-bold uppercase">Sync GitHub</button>
                     </header>
 
-                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-4">
-                        <p className="text-[10px] font-mono text-slate-400 uppercase mb-1">Status Noyau</p>
-                        <p className="text-xs font-mono text-blue-300 break-words">> {status}</p>
-                        {progress > 0 && progress < 100 && (
-                            <div className="w-full bg-slate-900 h-1 mt-3 rounded-full overflow-hidden">
-                                <div className="bg-blue-500 h-full transition-all duration-300" style={{width: `${progress}%`}}></div>
-                            </div>
-                        )}
+                    <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-4 shadow-lg">
+                        <p className="text-xs font-mono text-amber-400 break-words">> {status}</p>
                     </div>
 
-                    {!engine ? (
-                        <div className="flex-1 flex flex-col items-center justify-center space-y-6 text-center">
-                            <div className="text-6xl animate-pulse">👶</div>
-                            <button onClick={initAI} className="bg-blue-600 px-10 py-4 rounded-2xl font-bold text-lg shadow-xl active:scale-95 transition-all">ÉVEILLER BABAI</button>
-                            <p className="text-slate-500 text-[10px] uppercase">Vérifie que tu es en Wi-Fi (1.5Go à charger)</p>
-                        </div>
-                    ) : (
-                        <div className="flex-1 flex flex-col min-h-0">
-                            <div className="flex-1 overflow-y-auto space-y-4 mb-4 scrollbar-hide">
-                                {chatHistory.map((m, i) => (
-                                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tl-none'}`}>
-                                            {m.content}
-                                        </div>
-                                    </div>
-                                ))}
-                                <div ref={chatEndRef} />
+                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 text-sm">
+                        {chatHistory.map((m, i) => (
+                            <div key={i} className={`p-3 rounded-xl ${m.role === 'user' ? 'bg-slate-700 ml-8' : 'bg-amber-900/30 mr-8 border border-amber-900/50'}`}>
+                                <strong>{m.role === 'user' ? 'Moi' : 'Babai'}:</strong> {m.content}
                             </div>
-                            <div className="flex gap-2 p-2 bg-slate-950 rounded-2xl border border-slate-800">
-                                <input className="flex-1 bg-transparent px-2 py-2 outline-none text-sm" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleChat()} placeholder="Instruire Babai..." />
-                                <button onClick={handleChat} className="bg-blue-600 px-4 rounded-xl text-xs font-bold">GO</button>
-                            </div>
+                        ))}
+                    </div>
+
+                    <div className="space-y-2">
+                        <textarea 
+                            className="w-full bg-slate-950 p-2 text-[10px] font-mono border border-slate-800 rounded h-24 overflow-auto"
+                            value={code}
+                            onChange={(e) => setCode(e.target.value)}
+                            placeholder="Code source à modifier..."
+                        />
+                        <div className="flex gap-2">
+                            <input className="flex-1 bg-slate-950 p-2 rounded border border-slate-800 text-sm outline-none" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Message..." />
+                            <button onClick={callAI} className="bg-amber-600 px-4 rounded font-bold">SEND</button>
                         </div>
-                    )}
+                    </div>
                     
-                    <footer className="mt-4">
-                        <input type="password" placeholder="GitHub Access Token" value={token} onChange={(e) => {setToken(e.target.value); localStorage.setItem('gh_token', e.target.value)}} className="w-full p-2 bg-slate-950 border border-slate-900 rounded-lg text-[10px] font-mono outline-none" />
-                    </footer>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                        <input type="password" placeholder="GitHub Token" value={ghToken} onChange={(e) => {setGhToken(e.target.value); localStorage.setItem('gh_token', e.target.value)}} className="p-2 bg-slate-950 border border-slate-800 rounded text-[9px]" />
+                        <input type="password" placeholder="HF API Key" value={aiKey} onChange={(e) => {setAiKey(e.target.value); localStorage.setItem('ai_key', e.target.value)}} className="p-2 bg-slate-950 border border-slate-800 rounded text-[9px]" />
+                    </div>
                 </div>
             );
         };
