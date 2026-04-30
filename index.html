@@ -33,29 +33,39 @@
             const selectedModel = "Gemma-2b-it-q4f16_1-MLC";
 
             const initAI = async () => {
-                if (!window.webllm) {
-                    setStatus("Erreur: WebLLM n'est pas encore chargé...");
-                    return;
-                }
+    if (!window.webllm) {
+        setStatus("Erreur: WebLLM n'est pas encore chargé...");
+        return;
+    }
 
-                if (!navigator.gpu) {
-                    setStatus("WebGPU non supporté. Activez 'unsafe-webgpu' dans chrome://flags");
-                    return;
-                }
+    setStatus("Configuration du modèle...");
+    try {
+        // On définit explicitement où trouver Gemma-2b
+        const appConfig = {
+            model_list: [
+                {
+                    "model_url": "https://huggingface.co/mlc-ai/gemma-2b-it-q4f16_1-MLC/resolve/main/",
+                    "model_id": "Gemma-2b-it-q4f16_1-MLC",
+                    "model_lib_url": "https://raw.githubusercontent.com/mlc-ai/binary-mlc-llm-libs/main/gemma-2b-it/gemma-2b-it-q4f16_1-ctx4k_cs1k-webgpu.wasm",
+                },
+            ],
+        };
 
-                setStatus("Téléchargement du modèle (env. 1.5 Go)...");
-                try {
-                    const engineInstance = await window.webllm.CreateMLCEngine(
-                        selectedModel,
-                        { initProgressCallback: (p) => setProgress(Math.round(p.progress * 100)) }
-                    );
-                    setEngine(engineInstance);
-                    setStatus("Babai est éveillé !");
-                } catch (e) {
-                    console.error(e);
-                    setStatus("Erreur d'initialisation : " + e.message);
-                }
-            };
+        const engineInstance = await window.webllm.CreateMLCEngine(
+            "Gemma-2b-it-q4f16_1-MLC",
+            { 
+                appConfig: appConfig,
+                initProgressCallback: (p) => setProgress(Math.round(p.progress * 100)) 
+            }
+        );
+        setEngine(engineInstance);
+        setStatus("Babai est éveillé !");
+    } catch (e) {
+        console.error(e);
+        setStatus("Erreur d'initialisation : " + e.message);
+    }
+};
+
 
             const handleChat = async () => {
                 if (!engine || !input.trim()) return;
