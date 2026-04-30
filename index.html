@@ -3,109 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Babai AI v1.1.3 - Flash</title>
+    <title>Babai AI v1.1.5</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-950 text-slate-200 font-sans">
+<body class="bg-black text-slate-300 font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState } = React;
 
         const BabaiApp = () => {
-            const [status, setStatus] = useState("Babai prêt (Flash Mode)");
+            const [status, setStatus] = useState("Système Babai en ligne");
             const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_key') || '');
             const [messages, setMessages] = useState([]);
             const [input, setInput] = useState('');
 
             const askGemini = async () => {
-                if (!geminiKey) { setStatus("ERREUR: Clé API manquante"); return; }
-                if (!input.trim()) return;
-
-                setStatus("Flash en cours...");
-                const newMessages = [...messages, { role: 'user', text: input }];
-                setMessages(newMessages);
+                if (!geminiKey) { setStatus("MANQUE CLE API"); return; }
+                setStatus("Appel Gemini 2.0...");
+                
+                const userMsg = { role: 'user', parts: [{ text: input }] };
+                const newHistory = [...messages, { role: 'user', text: input }];
+                setMessages(newHistory);
                 
                 try {
-                    // Utilisation de gemini-1.5-flash sur l'endpoint v1
-                    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+                    // Endpoint v1beta avec le modèle Flash le plus récent de 2026
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
                     
                     const response = await fetch(url, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: input }] }]
-                        })
+                        body: JSON.stringify({ contents: [{ parts: [{ text: input }] }] })
                     });
 
                     const data = await response.json();
                     
                     if (data.error) {
-                        // Si le modèle n'est vraiment pas trouvé, on tente un fallback automatique
-                        throw new Error(data.error.message);
+                        // Tentative de repli (fallback) sur le 1.5 si le 2.0 n'est pas encore sur ton compte
+                        setStatus("Erreur 2.0, essai 1.5...");
+                        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`;
+                        const res2 = await fetch(fallbackUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ contents: [{ parts: [{ text: input }] }] })
+                        });
+                        const data2 = await res2.json();
+                        if (data2.error) throw new Error(data2.error.message);
+                        handleResponse(data2, newHistory);
+                    } else {
+                        handleResponse(data, newHistory);
                     }
-
-                    const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Réponse vide.";
-                    
-                    setMessages([...newMessages, { role: 'ai', text: replyText }]);
-                    setInput('');
-                    setStatus("Babai a répondu");
                 } catch (e) {
-                    console.error(e);
-                    setStatus("Erreur : " + e.message);
+                    setStatus("PANNE : " + e.message);
                 }
             };
 
-            return (
-                <div className="max-w-xl mx-auto h-screen flex flex-col p-4 bg-slate-900 shadow-2xl">
-                    <header className="py-4 border-b border-slate-800 flex justify-between items-center">
-                        <h1 className="text-2xl font-black text-yellow-500 italic">BABAI <span className="text-white font-normal text-sm">FLASH v1.1.3</span></h1>
-                    </header>
+            const handleResponse = (data, history) => {
+                const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Erreur de décodage";
+                setMessages([...history, { role: 'model', text: txt }]);
+                setInput('');
+                setStatus("Prêt");
+            };
 
-                    <div className="flex-1 overflow-y-auto my-4 space-y-4 pr-2 scrollbar-hide">
-                        {messages.length === 0 && (
-                            <div className="h-full flex items-center justify-center text-slate-600 italic text-sm text-center px-4">
-                                "Gemini 1.5 Flash" est prêt (Gratuit).<br/>Pose ta question.
-                            </div>
-                        )}
+            return (
+                <div className="max-w-md mx-auto h-screen flex flex-col p-4">
+                    <div className="flex justify-between border-b border-zinc-800 pb-2 mb-4 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
+                        <span>Babai OS</span>
+                        <span className="text-emerald-500">v1.1.5-stable</span>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 scrollbar-hide">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`p-3 rounded-2xl max-w-[90%] text-sm shadow-lg ${
-                                    m.role === 'user' ? 'bg-yellow-700 text-white' : 'bg-slate-800 border border-slate-700'
-                                }`}>
-                                    <pre className="whitespace-pre-wrap font-sans">{m.text}</pre>
+                                <div className={`p-3 rounded-lg text-sm ${m.role === 'user' ? 'bg-zinc-800' : 'bg-emerald-950/20 border border-emerald-900/30 text-emerald-100'}`}>
+                                    {m.text}
                                 </div>
                             </div>
                         ))}
                     </div>
 
-                    <div className="bg-slate-950 p-2 rounded-lg mb-4 border border-slate-800 shadow-inner">
-                        <p className="text-[10px] font-mono text-yellow-500 font-bold uppercase tracking-widest">> {status}</p>
+                    <div className="bg-zinc-900 p-2 rounded mb-4 text-[9px] font-mono">
+                        <span className="text-zinc-600 font-bold">> STATUS:</span> {status}
                     </div>
 
                     <div className="flex gap-2 mb-4">
-                        <input 
-                            className="flex-1 bg-slate-800 p-3 rounded-xl outline-none text-sm border border-transparent focus:border-yellow-600" 
-                            value={input} 
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && askGemini()}
-                            placeholder="Message..."
-                        />
-                        <button onClick={askGemini} className="bg-yellow-600 hover:bg-yellow-500 px-6 rounded-xl font-bold transition-all active:scale-95 text-xs text-black uppercase">Go</button>
+                        <input className="flex-1 bg-zinc-900 p-3 rounded outline-none text-sm border border-zinc-800 focus:border-emerald-500" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && askGemini()} placeholder="Type command..." />
+                        <button onClick={askGemini} className="bg-emerald-600 px-4 rounded text-black font-black text-xs uppercase">Run</button>
                     </div>
 
-                    <footer className="opacity-50 focus-within:opacity-100 transition-opacity">
-                        <input 
-                            type="password" 
-                            placeholder="Clé Gemini Flash" 
-                            value={geminiKey} 
-                            onChange={(e) => {setGeminiKey(e.target.value); localStorage.setItem('gemini_key', e.target.value)}} 
-                            className="w-full p-2 bg-black border border-slate-800 rounded text-[10px] font-mono outline-none" 
-                        />
-                    </footer>
+                    <input type="password" placeholder="Gemini API Key" value={geminiKey} onChange={(e) => {setGeminiKey(e.target.value); localStorage.setItem('gemini_key', e.target.value)}} className="w-full p-2 bg-transparent border border-zinc-900 rounded text-[9px] text-zinc-700 outline-none" />
                 </div>
             );
         };
