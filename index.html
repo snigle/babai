@@ -3,30 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Babai OS v1.2.0</title>
+    <title>Babai OS v1.2.2 - Force Bridge</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-black text-white font-sans overflow-hidden">
+<body class="bg-slate-950 text-white font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState } = React;
 
         const BabaiApp = () => {
-            const [status, setStatus] = useState("Babai v1.2.0");
+            const [status, setStatus] = useState("Babai v1.2.2");
             const [token, setToken] = useState(localStorage.getItem('hf_token') || '');
             const [messages, setMessages] = useState([]);
             const [input, setInput] = useState('');
-            const endRef = useRef(null);
-
-            useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
             const askAI = async () => {
                 if (!token) return setStatus("TOKEN REQUIS");
-                setStatus("📡 Requête envoyée...");
+                setStatus("📡 Forçage du tunnel...");
 
                 const userMsg = { role: "user", content: input };
                 const newHistory = [...messages, userMsg];
@@ -35,78 +32,66 @@
                 setInput('');
 
                 try {
-                    // Changement d'URL pour l'API publique gratuite (compatible v1)
-                    const response = await fetch("https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct/v1/chat/completions", {
+                    // Utilisation d'un proxy public pour éviter le Status 0 / CORS bloquant
+                    const proxyUrl = "https://corsproxy.io/?";
+                    const targetUrl = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3";
+
+                    const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
                         method: "POST",
                         headers: {
                             "Authorization": `Bearer ${token.trim()}`,
                             "Content-Type": "application/json"
                         },
-                        body: JSON.stringify({
-                            model: "meta-llama/Meta-Llama-3-8B-Instruct",
-                            messages: [
-                                { role: "system", content: "Tu es Babai, une IA concise." },
-                                ...newHistory
-                            ],
-                            max_tokens: 300
+                        body: JSON.stringify({ 
+                            inputs: `[INST] ${currentInput} [/INST]`,
+                            options: { wait_for_model: true }
                         })
                     });
 
                     const data = await response.json();
+                    
+                    if (!response.ok) throw new Error(data.error || "Erreur Proxy/API");
 
-                    if (!response.ok) throw new Error(data.error?.message || data.error || "Erreur API");
+                    const reply = Array.isArray(data) ? data[0].generated_text : data.generated_text;
+                    const cleanReply = reply.split('[/INST]').pop().trim();
 
-                    const reply = data.choices[0].message.content;
-                    setMessages([...newHistory, { role: "assistant", content: reply }]);
+                    setMessages([...newHistory, { role: "assistant", content: cleanReply }]);
                     setStatus("Connecté");
                 } catch (e) {
-                    console.error("Erreur complète:", e);
-                    setStatus("Erreur: " + e.message);
-                    // On garde le message pour que l'utilisateur puisse voir ce qui a foiré
-                    setMessages([...newHistory, { role: "assistant", content: "⚠️ " + e.message }]);
+                    setStatus("ERREUR");
+                    setMessages([...newHistory, { role: "assistant", content: "⚠️ Blocage : " + e.message }]);
                 }
             };
 
             return (
-                <div className="flex flex-col h-screen max-w-md mx-auto bg-slate-950 shadow-2xl border-x border-slate-900">
-                    <header className="p-4 border-b border-slate-900 flex justify-between items-center bg-slate-900/50">
-                        <h1 className="text-xl font-black text-blue-500 tracking-tighter">BABAI OS</h1>
-                        <span className="text-[10px] text-slate-500 font-mono">v1.2.0</span>
+                <div className="flex flex-col h-screen max-w-md mx-auto bg-black">
+                    <header className="p-4 border-b border-zinc-900 flex justify-between items-center font-mono">
+                        <h1 className="text-emerald-500 font-bold tracking-tighter text-xl">BABAI_TUNNEL</h1>
+                        <span className="text-[10px] text-zinc-600">v1.2.2</span>
                     </header>
-
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`p-3 rounded-2xl text-sm max-w-[85%] ${
-                                    m.role === 'user' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-slate-900 text-blue-100 border border-slate-800 rounded-tl-none shadow-md'
+                                <div className={`p-3 rounded text-sm max-w-[85%] font-mono ${
+                                    m.role === 'user' ? 'bg-zinc-800' : 'bg-emerald-950/20 border border-emerald-900 text-emerald-400'
                                 }`}>
                                     {m.content}
                                 </div>
                             </div>
                         ))}
-                        <div ref={endRef} />
                     </div>
-
-                    <div className="p-4 bg-slate-900/80 border-t border-slate-900">
-                        <div className="text-[9px] font-mono text-blue-400 mb-2 font-bold uppercase tracking-widest italic">> {status}</div>
-                        <div className="flex gap-2 mb-4 bg-black p-1 rounded-xl border border-slate-800 focus-within:border-blue-500">
-                            <input 
-                                className="flex-1 bg-transparent p-2 outline-none text-sm" 
-                                value={input} 
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && askAI()}
-                                placeholder="Message..."
-                            />
-                            <button onClick={askAI} className="bg-blue-600 hover:bg-blue-500 px-5 rounded-lg font-black text-[10px] text-white uppercase italic transition-all">Send</button>
+                    <div className="p-4 bg-zinc-900/50">
+                        <div className="text-[10px] font-mono text-emerald-500 mb-2 font-bold uppercase">> {status}</div>
+                        <div className="flex gap-2">
+                            <input className="flex-1 bg-black p-2 rounded border border-zinc-800 text-sm outline-none" 
+                                   value={input} onChange={(e) => setInput(e.target.value)} 
+                                   onKeyPress={(e) => e.key === 'Enter' && askAI()} />
+                            <button onClick={askAI} className="bg-emerald-600 px-4 rounded font-bold text-xs">RUN</button>
                         </div>
-                        <input 
-                            type="password" 
-                            placeholder="HF_TOKEN" 
-                            value={token} 
-                            onChange={(e) => {setToken(e.target.value); localStorage.setItem('hf_token', e.target.value)}} 
-                            className="w-full bg-transparent text-[10px] font-mono text-slate-700 outline-none text-center" 
-                        />
                     </div>
+                    <input type="password" placeholder="HF_TOKEN" value={token} 
+                           onChange={(e) => {setToken(e.target.value); localStorage.setItem('hf_token', e.target.value)}} 
+                           className="w-full bg-transparent text-[8px] font-mono text-zinc-800 p-2 outline-none" />
                 </div>
             );
         };
