@@ -3,98 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Babai AI v1.1.5</title>
+    <title>Babai OS v1.1.6 - Mistral Edition</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-black text-slate-300 font-sans">
+<body class="bg-slate-950 text-slate-100 font-sans">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect, useRef } = React;
 
         const BabaiApp = () => {
-            const [status, setStatus] = useState("Système Babai en ligne");
-            const [geminiKey, setGeminiKey] = useState(localStorage.getItem('gemini_key') || '');
+            const [status, setStatus] = useState("Système Babai Prêt");
+            const [hfToken, setHfToken] = useState(localStorage.getItem('hf_token') || '');
             const [messages, setMessages] = useState([]);
             const [input, setInput] = useState('');
+            const chatEndRef = useRef(null);
 
-            const askGemini = async () => {
-                if (!geminiKey) { setStatus("MANQUE CLE API"); return; }
-                setStatus("Appel Gemini 2.0...");
-                
-                const userMsg = { role: 'user', parts: [{ text: input }] };
-                const newHistory = [...messages, { role: 'user', text: input }];
-                setMessages(newHistory);
-                
+            useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+            const askAI = async () => {
+                if (!hfToken) { setStatus("ERREUR : Token Hugging Face manquant"); return; }
+                if (!input.trim()) return;
+
+                setStatus("Mistral réfléchit...");
+                const newMessages = [...messages, { role: 'user', text: input }];
+                setMessages(newMessages);
+                const currentInput = input;
+                setInput('');
+
                 try {
-                    // Endpoint v1beta avec le modèle Flash le plus récent de 2026
-                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
-                    
-                    const response = await fetch(url, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: input }] }] })
-                    });
+                    // API stable de Hugging Face avec gestion CORS native
+                    const response = await fetch(
+                        "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3",
+                        {
+                            headers: {
+                                "Authorization": `Bearer ${hfToken}`,
+                                "Content-Type": "application/json",
+                            },
+                            method: "POST",
+                            body: JSON.stringify({
+                                inputs: `<s>[INST] ${currentInput} [/INST]`,
+                                parameters: { max_new_tokens: 500, return_full_text: false }
+                            }),
+                        }
+                    );
 
                     const data = await response.json();
-                    
-                    if (data.error) {
-                        // Tentative de repli (fallback) sur le 1.5 si le 2.0 n'est pas encore sur ton compte
-                        setStatus("Erreur 2.0, essai 1.5...");
-                        const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`;
-                        const res2 = await fetch(fallbackUrl, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ contents: [{ parts: [{ text: input }] }] })
-                        });
-                        const data2 = await res2.json();
-                        if (data2.error) throw new Error(data2.error.message);
-                        handleResponse(data2, newHistory);
-                    } else {
-                        handleResponse(data, newHistory);
+
+                    if (response.status !== 200) {
+                        throw new Error(data.error || "Erreur API");
                     }
+
+                    // Mistral renvoie souvent un tableau [{generated_text: "..."}]
+                    const replyText = data[0]?.generated_text || data.generated_text || "Pas de réponse.";
+                    
+                    setMessages([...newMessages, { role: 'ai', text: replyText.trim() }]);
+                    setStatus("En ligne");
                 } catch (e) {
+                    console.error(e);
                     setStatus("PANNE : " + e.message);
                 }
             };
 
-            const handleResponse = (data, history) => {
-                const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Erreur de décodage";
-                setMessages([...history, { role: 'model', text: txt }]);
-                setInput('');
-                setStatus("Prêt");
-            };
-
             return (
-                <div className="max-w-md mx-auto h-screen flex flex-col p-4">
-                    <div className="flex justify-between border-b border-zinc-800 pb-2 mb-4 text-[10px] font-mono uppercase tracking-widest text-zinc-500">
-                        <span>Babai OS</span>
-                        <span className="text-emerald-500">v1.1.5-stable</span>
-                    </div>
+                <div className="max-w-xl mx-auto h-screen flex flex-col p-4 bg-slate-900 shadow-2xl">
+                    <header className="flex justify-between items-center border-b border-slate-800 pb-4 mb-4 font-black italic">
+                        <h1 className="text-2xl text-indigo-500">BABAI <span className="text-white opacity-50">v1.1.6</span></h1>
+                        <div className="text-[10px] bg-indigo-900/50 text-indigo-300 px-2 py-1 rounded">HF-MISTRAL-7B</div>
+                    </header>
 
-                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 scrollbar-hide">
+                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 scrollbar-hide">
+                        {messages.length === 0 && (
+                            <div className="h-full flex items-center justify-center text-slate-600 text-sm text-center italic px-10">
+                                Babai attend tes instructions via l'API Hugging Face...
+                            </div>
+                        )}
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`p-3 rounded-lg text-sm ${m.role === 'user' ? 'bg-zinc-800' : 'bg-emerald-950/20 border border-emerald-900/30 text-emerald-100'}`}>
-                                    {m.text}
+                                <div className={`p-4 rounded-2xl max-w-[90%] text-sm shadow-xl ${
+                                    m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 border border-slate-700 rounded-tl-none'
+                                }`}>
+                                    <p className="whitespace-pre-wrap">{m.text}</p>
                                 </div>
                             </div>
                         ))}
+                        <div ref={chatEndRef} />
                     </div>
 
-                    <div className="bg-zinc-900 p-2 rounded mb-4 text-[9px] font-mono">
-                        <span className="text-zinc-600 font-bold">> STATUS:</span> {status}
+                    <div className="bg-black/50 p-3 rounded-xl mb-4 border border-slate-800">
+                        <p className="text-xs font-mono text-indigo-400 font-bold uppercase">> {status}</p>
                     </div>
 
-                    <div className="flex gap-2 mb-4">
-                        <input className="flex-1 bg-zinc-900 p-3 rounded outline-none text-sm border border-zinc-800 focus:border-emerald-500" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && askGemini()} placeholder="Type command..." />
-                        <button onClick={askGemini} className="bg-emerald-600 px-4 rounded text-black font-black text-xs uppercase">Run</button>
+                    <div className="flex gap-2 mb-4 bg-slate-950 p-2 rounded-2xl border border-slate-800 focus-within:border-indigo-500/50 transition-all">
+                        <input 
+                            className="flex-1 bg-transparent p-2 outline-none text-sm" 
+                            value={input} 
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && askAI()}
+                            placeholder="Message..."
+                        />
+                        <button onClick={askAI} className="bg-indigo-600 hover:bg-indigo-500 px-6 rounded-xl font-black text-[10px] text-white uppercase tracking-tighter">Send</button>
                     </div>
 
-                    <input type="password" placeholder="Gemini API Key" value={geminiKey} onChange={(e) => {setGeminiKey(e.target.value); localStorage.setItem('gemini_key', e.target.value)}} className="w-full p-2 bg-transparent border border-zinc-900 rounded text-[9px] text-zinc-700 outline-none" />
+                    <footer>
+                        <input 
+                            type="password" 
+                            placeholder="Hugging Face Token (hf_...)" 
+                            value={hfToken} 
+                            onChange={(e) => {setHfToken(e.target.value); localStorage.setItem('hf_token', e.target.value)}} 
+                            className="w-full p-2 bg-transparent border border-slate-800 rounded-lg text-[9px] font-mono text-slate-700 focus:text-indigo-500 outline-none transition-all" 
+                        />
+                    </footer>
                 </div>
             );
         };
