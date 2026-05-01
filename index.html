@@ -3,120 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Babai OS v1.1.6 - Mistral Edition</title>
+    <title>Babai OS v1.1.7</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans">
+<body class="bg-black text-slate-100 font-sans overflow-hidden">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
         const BabaiApp = () => {
-            const [status, setStatus] = useState("Système Babai Prêt");
-            const [hfToken, setHfToken] = useState(localStorage.getItem('hf_token') || '');
+            const [status, setStatus] = useState("Babai en ligne");
+            const [token, setToken] = useState(localStorage.getItem('hf_token') || '');
             const [messages, setMessages] = useState([]);
             const [input, setInput] = useState('');
-            const chatEndRef = useRef(null);
+            const endRef = useRef(null);
 
-            useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+            useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-            const askAI = async () => {
-                if (!hfToken) { setStatus("ERREUR : Token Hugging Face manquant"); return; }
-                if (!input.trim()) return;
-
-                setStatus("Mistral réfléchit...");
-                const newMessages = [...messages, { role: 'user', text: input }];
-                setMessages(newMessages);
-                const currentInput = input;
+            const callMistral = async () => {
+                if (!token) return setStatus("TOKEN MANQUANT");
+                setStatus("📡 CONNEXION...");
+                
+                const currentMsg = input;
+                const newHistory = [...messages, { role: 'user', text: currentMsg }];
+                setMessages(newHistory);
                 setInput('');
 
                 try {
-                    // API stable de Hugging Face avec gestion CORS native
+                    // Config ultra-robuste conforme doc HF 2026
                     const response = await fetch(
                         "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3",
                         {
+                            method: "POST",
                             headers: {
-                                "Authorization": `Bearer ${hfToken}`,
+                                "Authorization": `Bearer ${token}`,
                                 "Content-Type": "application/json",
                             },
-                            method: "POST",
                             body: JSON.stringify({
-                                inputs: `<s>[INST] ${currentInput} [/INST]`,
-                                parameters: { max_new_tokens: 500, return_full_text: false }
+                                inputs: `[INST] ${currentMsg} [/INST]`,
+                                parameters: { max_new_tokens: 250, wait_for_model: true }
                             }),
                         }
                     );
 
-                    const data = await response.json();
-
-                    if (response.status !== 200) {
-                        throw new Error(data.error || "Erreur API");
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || "Erreur Serveur");
                     }
 
-                    // Mistral renvoie souvent un tableau [{generated_text: "..."}]
-                    const replyText = data[0]?.generated_text || data.generated_text || "Pas de réponse.";
+                    const data = await response.json();
+                    const reply = data[0]?.generated_text || "Pas de réponse";
                     
-                    setMessages([...newMessages, { role: 'ai', text: replyText.trim() }]);
-                    setStatus("En ligne");
+                    setMessages([...newHistory, { role: 'ai', text: reply.replace(/\[INST\].*?\[\/INST\]/gs, "").trim() }]);
+                    setStatus("EN LIGNE");
                 } catch (e) {
-                    console.error(e);
-                    setStatus("PANNE : " + e.message);
+                    setStatus("❌ BLOCAGE RÉSEAU");
+                    setMessages([...newHistory, { role: 'ai', text: "Erreur de connexion. Si tu es sur le Wi-Fi de l'hôpital, passe en 4G. Le pare-feu bloque l'IA." }]);
                 }
             };
 
             return (
-                <div className="max-w-xl mx-auto h-screen flex flex-col p-4 bg-slate-900 shadow-2xl">
-                    <header className="flex justify-between items-center border-b border-slate-800 pb-4 mb-4 font-black italic">
-                        <h1 className="text-2xl text-indigo-500">BABAI <span className="text-white opacity-50">v1.1.6</span></h1>
-                        <div className="text-[10px] bg-indigo-900/50 text-indigo-300 px-2 py-1 rounded">HF-MISTRAL-7B</div>
+                <div className="flex flex-col h-screen bg-slate-950 max-w-md mx-auto border-x border-slate-800">
+                    <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-black/50 backdrop-blur">
+                        <h1 className="text-xl font-black text-indigo-400 italic tracking-tighter">BABAI OS <span className="text-[10px] text-slate-600 not-italic">v1.1.7</span></h1>
+                        <div className="flex gap-1">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                            <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+                        </div>
                     </header>
 
-                    <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 scrollbar-hide">
-                        {messages.length === 0 && (
-                            <div className="h-full flex items-center justify-center text-slate-600 text-sm text-center italic px-10">
-                                Babai attend tes instructions via l'API Hugging Face...
-                            </div>
-                        )}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`p-4 rounded-2xl max-w-[90%] text-sm shadow-xl ${
-                                    m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 border border-slate-700 rounded-tl-none'
+                                <div className={`p-3 rounded-2xl text-sm max-w-[85%] shadow-lg ${
+                                    m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-900 border border-slate-800 text-indigo-100'
                                 }`}>
-                                    <p className="whitespace-pre-wrap">{m.text}</p>
+                                    {m.text}
                                 </div>
                             </div>
                         ))}
-                        <div ref={chatEndRef} />
+                        <div ref={endRef} />
                     </div>
 
-                    <div className="bg-black/50 p-3 rounded-xl mb-4 border border-slate-800">
-                        <p className="text-xs font-mono text-indigo-400 font-bold uppercase">> {status}</p>
-                    </div>
-
-                    <div className="flex gap-2 mb-4 bg-slate-950 p-2 rounded-2xl border border-slate-800 focus-within:border-indigo-500/50 transition-all">
-                        <input 
-                            className="flex-1 bg-transparent p-2 outline-none text-sm" 
-                            value={input} 
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && askAI()}
-                            placeholder="Message..."
-                        />
-                        <button onClick={askAI} className="bg-indigo-600 hover:bg-indigo-500 px-6 rounded-xl font-black text-[10px] text-white uppercase tracking-tighter">Send</button>
-                    </div>
-
-                    <footer>
+                    <div className="p-4 bg-black/40 border-t border-slate-900">
+                        <div className="text-[10px] font-mono text-indigo-500 mb-2 uppercase font-bold tracking-widest">> {status}</div>
+                        <div className="flex gap-2 mb-4 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                            <input 
+                                className="flex-1 bg-transparent p-2 outline-none text-sm" 
+                                value={input} 
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && callMistral()}
+                                placeholder="Instructions..."
+                            />
+                            <button onClick={callMistral} className="bg-indigo-600 px-4 py-2 rounded-lg font-bold text-xs">GO</button>
+                        </div>
                         <input 
                             type="password" 
-                            placeholder="Hugging Face Token (hf_...)" 
-                            value={hfToken} 
-                            onChange={(e) => {setHfToken(e.target.value); localStorage.setItem('hf_token', e.target.value)}} 
-                            className="w-full p-2 bg-transparent border border-slate-800 rounded-lg text-[9px] font-mono text-slate-700 focus:text-indigo-500 outline-none transition-all" 
+                            placeholder="HF Token (hf_...)" 
+                            value={token} 
+                            onChange={(e) => {setToken(e.target.value); localStorage.setItem('hf_token', e.target.value)}} 
+                            className="w-full bg-transparent border-t border-slate-900 pt-2 text-[10px] font-mono text-slate-600 outline-none focus:text-indigo-400" 
                         />
-                    </footer>
+                    </div>
                 </div>
             );
         };
